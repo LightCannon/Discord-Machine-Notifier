@@ -3,7 +3,7 @@
 
 ## Perquisites
  1. Python 3.7+ is required to run this bot.
- 2. Your bot added to your server (on which you are receiving the messages). Refer to here to create a discord bot.
+ 2. Your bot added to your server (on which you are receiving the messages). Refer to [here](https://github.com/LightCannon/Discord-Machine-Notifier#creating-a-discord-bot) to create a discord bot.
  3. An email to receive notifications from.
 
 ## Installing required modules
