@@ -18,6 +18,7 @@ TIMEOUT = int(os.getenv('MACHINE_TIMEOUT'))
 RISK_MARGIN_NOTIFICATION_SECONDS = int(os.getenv('RISK_MARGIN_NOTIFICATION_SECONDS'))
 UPDATE_RATE = int(os.getenv('UPDATE_RATE'))
 MSG_LIMIT = 50
+READY = False
 
 client = discord.Client(intents=discord.Intents.all())
 emailer = EmailSender()
@@ -30,21 +31,43 @@ margin_risk = {}
 @client.event
 async def on_ready():
     global channel
+    global READY
+    
     print("Bot is ready")
     # Delete all messages in the channel when bot starts
     channel = client.get_channel(CHANNEL_ID)
-    m = await channel.purge(limit=MSG_LIMIT)
-    while len(m) > 0:
-        m = await channel.purge(limit=MSG_LIMIT)
-        # time.sleep(0.1)
+    
+    limit = 100
+    while True:
+        # async for msg in channel.history(limit=LIMIT):
+        #     limit += 1
+        #     
+        # if limit == 0:
+        #     break
+        msgs = await channel.purge(limit=limit, bulk=True)
+        print (len(msgs))
+        await asyncio.sleep(1)
+        limit = len(msgs)
+        if limit == 0:
+            break
+    
+    
+    #m = await channel.purge(limit=MSG_LIMIT)
+    #while len(m) > 0:
+    #    m = await channel.purge(limit=MSG_LIMIT)
+    #    await asyncio.sleep(0.05)
 
     print('All messages are deleted')
-    channel = client.get_channel(CHANNEL_ID)
+    READY = True
+    # channel = client.get_channel(CHANNEL_ID)
     asyncio.ensure_future(check_machines_status())
     # await message.delete()
 
 @client.event
 async def on_message(message):
+    if not READY:
+        return
+    
     messages_id = []
     
     if message.channel.id != CHANNEL_ID:
@@ -56,22 +79,22 @@ async def on_message(message):
     message_id = message.id
     machine_name = message.content.split()[0]
 
-    if message.content.lower().find('risk of margin') > -1:
-        if margin_risk.get(machine_name, None) is None:
-            emailer.send_notification_msg(f"{machine_name} is at risk of marging")
-            margin_risk[machine_name] = datetime.now()
-            
-        last_notification = datetime.now() - margin_risk[machine_name]
-        delta_s = abs(last_notification.total_seconds())
-        
-        if delta_s >= RISK_MARGIN_NOTIFICATION_SECONDS:
-            emailer.send_notification_msg(f"{machine_name} is at risk of marging")
-            margin_risk[machine_name] = datetime.now()
-    else:
-        # check if we were at risk of margining before
-        if margin_risk.get(machine_name, None) is not None:
-            emailer.send_notification_msg(f"{machine_name} has avoided risk of marging")
-            del margin_risk[machine_name]
+    # if message.content.lower().find('risk of margin') > -1:
+    #     if margin_risk.get(machine_name, None) is None:
+    #         emailer.send_notification_msg(f"{machine_name} is at risk of marging")
+    #         margin_risk[machine_name] = datetime.now()
+    #         
+    #     last_notification = datetime.now() - margin_risk[machine_name]
+    #     delta_s = abs(last_notification.total_seconds())
+    #     
+    #     if delta_s >= RISK_MARGIN_NOTIFICATION_SECONDS:
+    #         emailer.send_notification_msg(f"{machine_name} is at risk of marging")
+    #         margin_risk[machine_name] = datetime.now()
+    # else:
+    #     # check if we were at risk of margining before
+    #     if margin_risk.get(machine_name, None) is not None:
+    #         emailer.send_notification_msg(f"{machine_name} has avoided risk of marging")
+    #         del margin_risk[machine_name]
 
     # Get all messages in channel that have the same machine name
     async for m in channel.history(limit=None):
